@@ -1654,7 +1654,7 @@
     g.restore();
     // 前岸与两侧的石头（小、湿）
     for (i = 0; i < n; i++) {
-      var py2 = pts[i * 2 + 1]; if (py2 < cy - ry * 0.25) continue;
+      var py2 = pts[i * 2 + 1]; if (py2 < cy - ry * 0.25 || (py2 > cy + ry * 0.3 && i % 2)) continue;
       var bx2 = pts[i * 2], bw2 = r.range(40, 90) * (py2 > cy + ry * 0.5 ? 0.9 : 1.1), bh2 = bw2 * r.range(0.35, 0.55);
       wetRock(g, q, bx2 + r.range(-10, 10), py2 + bh2 * 0.3, bw2, bh2, seed * 11 + i, false);
     }
@@ -1662,9 +1662,11 @@
   // 湿岩：深色、上缘有高光与雪（top=true 时是后岸的大石）
   function wetRock(g, q, x, y, w, h, seed, top) {
     var r = RNG(seed), pts = [], i;
-    for (i = 0; i < 9; i++) { var a = PI + i / 8 * PI, k = r.range(0.85, 1.05); pts.push(x + Math.cos(a) * w / 2 * k, y + Math.sin(a) * h * k); }
+    var flat = top ? 1 : r.range(0.55, 0.9);
+    for (i = 0; i < 9; i++) { var a = PI + i / 8 * PI, k = r.range(0.7, 1.08); pts.push(x + Math.cos(a) * w / 2 * k, y + Math.sin(a) * h * k * flat); }
     pts.push(x + w * 0.48, y + h * 0.12, x - w * 0.48, y + h * 0.12);
-    smoothPath(g, pts, true); fillP(g, K.lin(g, x - w / 2, y - h, x + w / 2, y, ['#4a4c56', '#2a2c34', '#16181e']));
+    var tone = r.range(-0.12, 0.18), c0 = K.shade('#585a64', tone), c1 = K.shade('#34363e', tone * 0.6);
+    smoothPath(g, pts, true); fillP(g, K.lin(g, x - w / 2, y - h, x + w / 2, y, [c0, c1, '#1a1c22']));
     if (q.tex > 0) { smoothPath(g, pts, true); texFill(g, q, 'rock', ROCK_WET, 96, 0, 0, 0.45, null, null, null, 'overlay'); }
     if (q.light >= 1) { g.beginPath(); g.moveTo(pts[2], pts[3]); for (i = 4; i < 12; i += 2) g.lineTo(pts[i], pts[i + 1]); strokeP(g, 'rgba(200,210,230,0.35)', 2); }
     if (q.light >= 2) { g.save(); g.globalCompositeOperation = 'lighter'; K.ellipse(g, x - w * 0.15, y - h * 0.62, w * 0.14, h * 0.07, -0.2); fillP(g, 'rgba(230,236,248,0.45)'); g.restore(); }
@@ -1704,8 +1706,8 @@
     boardwalk(g, q, [230, 548, 260, 620, 300, 660], 70, 5009);
     boardwalk(g, q, [1690, 548, 1660, 620, 1620, 660], 70, 5010);
     // 小路（踏出来的雪径）
-    trodPath(g, q, [90, 1100, 140, 990, 210, 910, 280, 880], 110, 56, 5017);
-    trodPath(g, q, [1830, 1100, 1780, 990, 1710, 910, 1640, 880], 110, 56, 5019);
+    trodPath(g, q, [120, 1100, 160, 990, 220, 910, 270, 880], 80, 40, 5017);
+    trodPath(g, q, [1800, 1100, 1760, 990, 1700, 910, 1650, 880], 80, 40, 5019);
     // 池子
     var mp = poolShape(560, 772, 380, 118, 5011), wp = poolShape(1370, 772, 380, 118, 5013);
     onsenPool(g, q, wp, 1370, 772, 380, 118, 23);
@@ -1786,11 +1788,9 @@
   function drawYukawaBath(g, q) {
     // 两池前岸溢出的细流沿雪坡汇合，变成画面下方冒热气的小溪「汤川」（水面不积雪，溪底积着白色汤花）
     var r = RNG(5051), i;
-    var chL = [760, 880, 820, 930, 880, 975], chR = [1160, 880, 1100, 930, 1040, 975];
-    for (var k = 0; k < 2; k++) { var P = k ? chR : chL; g.beginPath(); smoothPath(g, P, false); strokeP(g, K.rgba(SN.shd, 0.4), 30); g.beginPath(); smoothPath(g, P, false); strokeP(g, '#3a5054', 18); g.beginPath(); smoothPath(g, P, false); strokeP(g, 'rgba(180,212,208,0.4)', 5); }
-    // 主溪：从汇合处向画面下方变宽
-    var cl = [960, 978, 950, 1010, 970, 1045, 940, 1095], L = [], R = [], n = cl.length / 2;
-    for (i = 0; i < n; i++) { var w = lerp(40, 150, i / (n - 1)); L.push(cl[i * 2] - w, cl[i * 2 + 1]); R.push(cl[i * 2] + w, cl[i * 2 + 1]); }
+    // 主溪：从两池之间的低处流出，蜿蜒着向画面下方变宽
+    var cl = [962, 880, 940, 930, 985, 975, 950, 1020, 985, 1060, 950, 1100], L = [], R = [], n = cl.length / 2;
+    for (i = 0; i < n; i++) { var w = lerp(18, 130, Math.pow(i / (n - 1), 1.3)) * (0.85 + 0.3 * vn(i * 1.7, 3.3)); L.push(cl[i * 2] - w, cl[i * 2 + 1]); R.push(cl[i * 2] + w, cl[i * 2 + 1]); }
     var poly = L.concat(revPts(R));
     // 两岸的雪（被热气融成圆滑的边，略带湿的灰色）
     g.beginPath(); smoothPath(g, poly, true); strokeP(g, '#9aa2b8', 26);
