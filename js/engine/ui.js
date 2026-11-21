@@ -24,11 +24,11 @@
     UI.layers.game = el('div', 'layer hidden', root); UI.layers.game.id = 'game';
     toastEl = el('div', '', root); toastEl.id = 'toast';
     shoutEl = el('div', '', root); shoutEl.id = 'shout';
+    fadeEl = el('div', '', root); fadeEl.id = 'fade';      // 黑场在卡片之下：淡出后标题卡/结束卡仍然可见
     cardEl = el('div', 'layer hidden', root);
     UI.layers.title = el('div', 'layer hidden', root); UI.layers.title.id = 'title';
     UI.layers.menu = el('div', 'layer hidden', root);
     flashEl = el('div', '', root); flashEl.id = 'flash';
-    fadeEl = el('div', '', root); fadeEl.id = 'fade';
     loadingEl = el('div', 'hidden', root); loadingEl.id = 'loading'; loadingEl.textContent = '读取中';
 
     buildQuick();
