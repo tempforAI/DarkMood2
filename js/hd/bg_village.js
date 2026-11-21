@@ -882,25 +882,25 @@
   // o = { seed, dip(倾角), band 层厚, rock, dark, mid, hz, snow(积雪量) }
   function strataCliff(g, q, x, y, w, h, o) {
     o = o || {};
-    var dk = C(o.dark || '#262934'), md = C(o.mid || '#636878'), lt = C(o.lite || '#9ea3b2'), hi = C(SN.hi), sh = C(SN.sh), hz = C(SKY.hor);
+    var dk = C(o.dark || '#1e2129'), md = C(o.mid || '#4a4e5c'), lt = C(o.lite || '#858a9c'), hi = C(SN.hi), sh = C(SN.sh), hz = C(SKY.hor);
     var seed = o.seed || 5, dip = o.dip || 0.08, band = o.band || 46, snw = o.snow === undefined ? 1 : o.snow, hzk = o.hz || 0, oct = K.byModel(q, 2, 3, 3);
     var r = fres(q, o.res || 0.36);
     field(g, x, y, w, h, w * r, h * r, function (u, v, out) {
       var px = x + u * w, py = y + v * h;
-      var warp = (fbm(px * 0.004, py * 0.004, 2, seed) - 0.5) * band * 1.6;
-      var sc = (py + px * dip + warp) / band, li = Math.floor(sc), f = sc - li;
+      var warp = (fbm(px * 0.002, py * 0.003, 3, seed) - 0.5) * band * 1.5 + (fbm(px * 0.014, py * 0.01, 2, seed + 1) - 0.5) * band * 0.5;
+      var sc = (py + px * dip + warp) / band + fbm(px * 0.0015, py * 0.0015, 2, seed + 2) * 1.5, li = Math.floor(sc), f = sc - li;
       var tone = cellHash(li, 5, seed);
       // 竖向节理
-      var jx = px / (band * 1.4) + fbm(py * 0.01, li * 1.7, 2, seed + 3) * 1.2, jf = jx - Math.floor(jx), joint = sstep(0.04, 0, Math.min(jf, 1 - jf)) * 0.5;
+      var jx = px / (band * (1.2 + cellHash(li, 9, seed) * 1.6)) + fbm(py * 0.01, li * 1.7, 2, seed + 3) * 1.6, jf = jx - Math.floor(jx), joint = sstep(0.05, 0, Math.min(jf, 1 - jf)) * 0.45 * (cellHash(li, 11, seed) < 0.7 ? 1 : 0);
       var face = fbm(px * 0.03, py * 0.012, oct, seed + 5);
       // 层的上缘受光（平台），下缘是悬垂的阴影
-      var lum = 0.35 + tone * 0.3 + face * 0.3 - joint - (f > 0.82 ? (f - 0.82) * 3 : 0) + (f < 0.1 ? 0.2 : 0);
+      var lum = 0.28 + tone * 0.34 + face * 0.32 - joint - (f > 0.78 ? (f - 0.78) * 2.6 : 0) + (f < 0.08 ? 0.18 : 0);
       lum = sat(lum);
       var R, G, B;
       if (lum < 0.5) { var t = lum * 2; R = dk[0] + (md[0] - dk[0]) * t; G = dk[1] + (md[1] - dk[1]) * t; B = dk[2] + (md[2] - dk[2]) * t; }
       else { var t2 = (lum - 0.5) * 2; R = md[0] + (lt[0] - md[0]) * t2; G = md[1] + (lt[1] - md[1]) * t2; B = md[2] + (lt[2] - md[2]) * t2; }
       // 层面平台上的积雪（每层上缘一道，宽度随噪声变化），陡处没有
-      var ledge = sstep(0.0, 0.03, f) * sstep(0.22 + face * 0.18 * snw, 0.12, f) * snw * sstep(0.35, 0.55, fbm(px * 0.008, li * 2.3, 2, seed + 9) + 0.25 * snw);
+      var ledge = sstep(0.0, 0.03, f) * sstep(0.26 + face * 0.2 * snw, 0.1, f) * Math.min(1, snw) * sstep(0.42, 0.58, fbm(px * 0.006, li * 2.3, 3, seed + 9) + 0.2 * snw) * (cellHash(li, 13, seed) < 0.75 ? 1 : 0.3);
       if (ledge > 0) { var sl2 = sat(0.6 + (face - 0.5)); var sr = sh[0] + (hi[0] - sh[0]) * sl2, sg = sh[1] + (hi[1] - sh[1]) * sl2, sb = sh[2] + (hi[2] - sh[2]) * sl2; R += (sr - R) * ledge; G += (sg - G) * ledge; B += (sb - B) * ledge; }
       var hk = hzk * (o.hzv ? (1 - v * 0.6) : 1);
       out[0] = R + (hz[0] - R) * hk; out[1] = G + (hz[1] - G) * hk; out[2] = B + (hz[2] - B) * hk;
@@ -964,7 +964,7 @@
   function drawTunnel(g, q, v) {
     var r = RNG(3001);
     sky(g, q, { y: 0, h: 460, seed: 301, gx: 0.3, gy: 0.3, gw: 0.2, dens: 0.05 });
-    snowRange(g, q, { x0: -20, x1: 1940, base: 760, top: 120, hf: function (t) { return 260 - Math.sin(t * PI * 1.3 + 0.4) * 80 - Math.sin(t * PI * 3.1) * 30; }, seed: 31, haze: 0.4, trees: 1400, ts: 9, cut: 0.42, forest: '#4a5462', step: 12 });
+    mountainLayers(g, q, { top: 200, base: 560, seed: 31, amp: 120, near: 80 });
     // 隧道所在的陡坡
     var slope = [-20, 600, 160, 470, 380, 300, 560, 170, 760, 110, 1000, 86, 1220, 120, 1420, 200, 1640, 330, 1800, 430, 1940, 520, 1940, 1100, -20, 1100];
     g.save(); K.poly(g, slope); g.clip();
@@ -1011,6 +1011,8 @@
     if (q.light >= 1) { K.glow(g, cx, top + 88, 140, '#ffb050', 0.32); K.pool(g, cx, 470, 220, 70, '#ffb050', 0.08); }
     drawTunnelRoad(g, q);
     drawBusStop(g, q, 268, 792);
+    fgSnowbank(g, q, [-20, 990, 120, 960, 260, 1000, 340, 1090], 3051);
+    fgSnowbank(g, q, [1600, 1090, 1700, 1000, 1840, 970, 1940, 980], 3053);
     K.vignette(g, W, H, q.light >= 1 ? 0.4 : 0.3, 0.5);
   }
   function drawAvalanche(g, q, cx, gnd) {
@@ -1109,12 +1111,12 @@
   function drawBridge(g, q, v) {
     var cut = v === 'cut', r = RNG(3101);
     sky(g, q, { y: 0, h: 760, seed: 311, gx: 0.42, gy: 0.28, gw: 0.2, dens: 0.04 });
-    snowRange(g, q, { x0: -20, x1: 1940, base: 820, top: 150, hf: function (t) { return 330 - Math.sin(t * PI * 1.1 + 0.3) * 120 - Math.sin(t * PI * 4) * 24; }, seed: 41, haze: 0.45, trees: 1800, ts: 12, cut: 0.4, forest: '#46505e' });
+    mountainLayers(g, q, { top: 230, base: 640, seed: 41, amp: 130, near: 100 });
     drawGorge(g, q, cut);
     // 对岸的山崖（隧道所在），岩面上的积雪落在朝上的岩块上
     var far = [1150, 1100, 1180, 900, 1230, 760, 1300, 640, 1380, 540, 1480, 460, 1600, 400, 1760, 350, 1940, 320, 1940, 1100];
     g.save(); K.poly(g, far); g.clip();
-    snowCliff(g, q, 1140, 300, 800, 800, { seed: 45, rock: 0.55, hz: 0.28 });
+    strataCliff(g, q, 1140, 300, 800, 800, { seed: 45, dip: -0.12, band: 52, hz: 0.25, snow: 1 });
     haze(g, 1140, 300, 800, 800, SKY.hor, 0.05, 0.35);
     g.restore();
     if (q.light >= 1) { K.poly(g, far.slice(0, 18)); g.beginPath(); g.moveTo(far[0], far[1]); for (var e = 2; e < 18; e += 2) g.lineTo(far[e], far[e + 1]); strokeP(g, 'rgba(240,244,252,0.6)', 3); }
@@ -1129,7 +1131,7 @@
     // 近岸（左下）：向谷中落下的雪坡与岩壁
     var nearL = [-20, 680, 240, 676, 520, 700, 700, 760, 820, 880, 860, 1100, -20, 1100];
     g.save(); K.poly(g, nearL); g.clip();
-    snowCliff(g, q, -20, 660, 900, 440, { seed: 49, rock: 0.25, bias: function (u, vv) { return (u - 0.5) * 0.25 + vv * 0.08; } });
+    strataCliff(g, q, -20, 660, 900, 440, { seed: 49, dip: 0.1, band: 44, snow: 1.3 });
     g.restore();
     // 右侧近岸
     var nearR = [1540, 1100, 1580, 880, 1680, 770, 1940, 730, 1940, 1100];
@@ -1142,6 +1144,7 @@
     drawAnchor(g, q, cut);
     // 电话接线箱
     drawJunction(g, q, cut);
+    fgSnowbank(g, q, [1500, 1090, 1580, 1030, 1700, 1000, 1940, 990], 3109);
     sparkle(g, q, 0, 700, 900, 380, 200, 3107);
     K.vignette(g, W, H, q.light >= 1 ? 0.42 : 0.3, 0.5);
   }
@@ -1820,7 +1823,7 @@
   function drawWatermill(g, q) {
     var r = RNG(5101), i;
     sky(g, q, { y: 0, h: 560, seed: 511, gx: 0.25, gy: 0.3, gw: 0.2, dens: 0.05 });
-    snowRange(g, q, { x0: -20, x1: 1100, base: 600, top: 160, hf: function (t) { return 320 - Math.sin(t * PI + 0.3) * 120; }, seed: 71, haze: 0.45, trees: 900, ts: 10, cut: 0.4, forest: '#46505e' });
+    mountainLayers(g, q, { top: 250, base: 580, seed: 71, amp: 120, near: 80 });
     for (i = 0; i < K.byModel(q, 6, 10, 14); i++) snowCedar(g, q, r.range(-20, 900), r.range(500, 580), r.range(140, 260), r, { haze: 0.25 });
     snowField(g, q, 0, 560, W, 520, { yh: 470, seed: 5103, amp: 0.9, fog: 140 });
     drawMillHut(g, q);
@@ -1833,6 +1836,8 @@
     drawChannel(g, q);
     // 小屋门前的小路与脚印
     trodPath(g, q, [900, 1100, 950, 990, 1000, 900, 1030, 828], 120, 60, 5107);
+    fgSnowbank(g, q, [-20, 1040, 120, 1020, 260, 1060, 320, 1090], 5109);
+    fencePosts(g, q, [[40, 1050, 150], [150, 1040, 130]], 5111);
     sparkle(g, q, 0, 560, 1140, 520, 200, 5105);
     K.vignette(g, W, H, q.light >= 1 ? 0.42 : 0.3, 0.5);
   }
@@ -2061,6 +2066,7 @@
     // 从门到离屋的小路：小夜往返的脚印与今早霜的脚印（雪停之后，轮廓清楚）
     trodPath(g, q, [1700, 1000, 1400, 990, 1000, 980, 600, 950, 380, 870], 46, 34, 6011, { prints: false });
     drawGardenPrints(g, q);
+    fgSnowbank(g, q, [-20, 1010, 140, 990, 300, 1040, 380, 1090], 6015);
     sparkle(g, q, 0, 700, W, 380, 260, 6013);
     K.vignette(g, W, H, q.light >= 1 ? 0.42 : 0.3, 0.5);
   }
@@ -2254,6 +2260,8 @@
     drawNoticeBoard(g, q, 240, 760);
     // 女坂（右）：绕过社务所背后的缓坡小路，竹扶手与小灯
     drawOnnazaka(g, q);
+    fgSnowbank(g, q, [-20, 1000, 160, 980, 330, 1030, 420, 1090], 6109);
+    fgSnowbank(g, q, [1500, 1090, 1600, 1030, 1780, 1000, 1940, 1010], 6111);
     sparkle(g, q, 0, 560, W, 520, 260, 6107);
     K.vignette(g, W, H, q.light >= 1 ? 0.44 : 0.32, 0.5);
   }
@@ -2447,6 +2455,9 @@
     K.poly(g, [px - 22, 760, px + 22, 760, px + 22, 510, px, 488, px - 22, 510]); fillP(g, K.lin(g, px - 22, 0, px + 22, 0, ['#8a8270', '#5a5446', '#3a3428']));
     g.strokeStyle = 'rgba(24,20,16,0.75)'; g.lineWidth = 3; g.beginPath(); for (var k = 0; k < 6; k++) { var yy = 530 + k * 30; g.moveTo(px - 9, yy); g.lineTo(px + 9, yy); g.moveTo(px, yy - 6); g.lineTo(px, yy + 14); if (k % 2) { g.moveTo(px - 8, yy + 10); g.lineTo(px + 6, yy + 16); } } g.stroke();
     snowCap(g, q, [px - 24, 512, px, 488, px + 24, 512], 10, { seed: 7031, over: 5 });
+    fencePosts(g, q, [[90, 1040, 180], [230, 1030, 150], [1700, 1030, 160], [1850, 1050, 190]], 7035);
+    fgSnowbank(g, q, [-20, 1040, 150, 1030, 330, 1070, 400, 1090], 7037);
+    fgSnowbank(g, q, [1560, 1090, 1680, 1050, 1820, 1040, 1940, 1050], 7039);
     sparkle(g, q, 0, 640, W, 440, 220, 7033);
     K.vignette(g, W, H, q.light >= 1 ? 0.5 : 0.36, 0.45);
   }
@@ -2506,7 +2517,7 @@
       for (var x = -20; x <= 1960; x += 30) pts.push(x, y0 + Math.sin(x * 0.005 + i * 2) * 40 + rr.range(-12, 12));
       pts.push(1960, H);
       g.save(); K.poly(g, pts); g.clip();
-      snowCliff(g, q, -20, y0 - 60, 1980, 1140 - y0, { seed: 7120 + i, rock: 0.5, fx: 0.02, fy: 0.005, hz: hz });
+      strataCliff(g, q, -20, y0 - 60, 1980, 1140 - y0, { seed: 7120 + i, dip: 0.05 - i * 0.1, band: 40 + i * 14, hz: hz, snow: 1.2, res: 0.24 });
       g.restore();
       for (var tI = 0; tI < K.byModel(q, 8, 14, 20); tI++) { var tx = rr.range(-20, 1960); snowCedar(g, q, tx, y0 + Math.sin(tx * 0.005 + i * 2) * 40 + 10, rr.range(50, 90) * cl[i][2], rr, { haze: hz }); }
       rectP(g, 0, y0 + 80, W, 700); fillP(g, K.lin(g, 0, y0 + 80, 0, y0 + 500, ['rgba(212,216,226,0)', 'rgba(212,216,226,' + (0.55 * hz + 0.2).toFixed(2) + ')']));
@@ -2514,12 +2525,12 @@
     // 深谷：对岸崖壁一直落进谷底（越深越暗），右侧近崖的内壁处于阴影中，谷底是层层雾带
     K.poly(g, [400, 600, 1520, 560, 1520, H, 400, H]); fillP(g, K.lin(g, 0, 560, 0, H, ['rgba(120,128,148,0.2)', 'rgba(52,58,76,0.75)', 'rgba(26,28,40,0.95)']));
     var inner = [1500, 600, 1460, 760, 1380, 880, 1260, 1000, 1180, H, 1520, H];
-    g.save(); K.poly(g, inner); g.clip(); snowCliff(g, q, 1150, 580, 380, 520, { seed: 7133, rock: 0.75, fx: 0.022, fy: 0.006, res: 0.3 }); rectP(g, 1150, 580, 380, 520); fillP(g, 'rgba(30,34,56,0.55)'); g.restore();
+    g.save(); K.poly(g, inner); g.clip(); strataCliff(g, q, 1150, 580, 380, 520, { seed: 7133, dip: -0.2, band: 50, snow: 0.8 }); rectP(g, 1150, 580, 380, 520); fillP(g, 'rgba(30,34,56,0.55)'); g.restore();
     for (i = 0; i < 5; i++) { g.save(); g.translate(960, 760 + i * 70); g.scale(1, 0.1); K.blob(g, 0, 0, 640 - i * 70, '#d6dae4', 0.42 - i * 0.06); g.restore(); }
     steam(g, q, 600, 860, 700, 220, 18, 7131, 0.18);
     // 右侧近处的山崖与树
     var rc = [1430, H, 1450, 820, 1510, 600, 1590, 420, 1700, 300, 1960, 220, 1960, H];
-    g.save(); K.poly(g, rc); g.clip(); snowCliff(g, q, 1420, 200, 550, 900, { seed: 7141, rock: 0.45, fx: 0.018, fy: 0.005, res: 0.36 }); g.restore();
+    g.save(); K.poly(g, rc); g.clip(); strataCliff(g, q, 1420, 200, 550, 900, { seed: 7141, dip: -0.25, band: 60, snow: 1.1 }); g.restore();
     if (q.light >= 1) { g.beginPath(); g.moveTo(1430, H); g.lineTo(1450, 820); g.lineTo(1510, 600); g.lineTo(1590, 420); g.lineTo(1700, 300); strokeP(g, 'rgba(245,248,252,0.7)', 4); }
     for (i = 0; i < K.byModel(q, 5, 8, 11); i++) { var tx2 = r.range(1560, 1940); snowCedar(g, q, tx2, 300 + (1940 - tx2) * 0.35 + r.range(60, 420), r.range(200, 330), r, { haze: 0.05 }); }
     // 左前景的岩台（送道的尽头）
@@ -2979,45 +2990,72 @@
     }
     return Math.sqrt(best);
   }
+  // 到折线的距离与所在一侧（叉积符号），用于峡谷两壁的明暗
+  function segDistSide(px, py, P, out) {
+    var best = 1e9, side = 1, tx = 1, ty = 0;
+    for (var i = 0; i + 3 < P.length; i += 2) {
+      var ax = P[i], ay = P[i + 1], bx = P[i + 2], by = P[i + 3], dx = bx - ax, dy = by - ay, t = ((px - ax) * dx + (py - ay) * dy) / (dx * dx + dy * dy);
+      t = t < 0 ? 0 : t > 1 ? 1 : t; var ex = px - (ax + dx * t), ey = py - (ay + dy * t), d = ex * ex + ey * ey;
+      if (d < best) { best = d; side = (dx * ey - dy * ex) > 0 ? 1 : -1; tx = dx; ty = dy; }
+    }
+    out[0] = Math.sqrt(best); out[1] = side;
+  }
+  function mapForest(x, y) {
+    var v = y / H, cx0 = (x - 1020) / 700, cy0 = (y - 640) / 320, clr = Math.exp(-(cx0 * cx0 + cy0 * cy0) * 1.6);
+    return fbm(x * 0.006, y * 0.006, 3, 905) * 0.6 + 0.2 + (1 - v) * 0.3 - clr * 0.62;
+  }
   function drawMap(g, q) {
-    var hi = C('#eef1f7'), bs = C('#d6dcea'), sh = C('#9aa4c4'), fz = C('#2c3a3e'), fz2 = C('#46584e'), dk = C('#1a1e2c');
-    var r0 = fres(q, 0.22);
+    var hi = C('#eef1f7'), bs = C('#d4dae8'), sh = C('#98a2c2'), fz = C('#1a2624'), fz2 = C('#344a40'), dk = C('#141822'), wl = C('#8a90a6'), ws = C('#3a3e52');
+    var D = [0, 0], r0 = fres(q, 0.24), rot = -0.35, ca = Math.cos(rot), sa = Math.sin(rot);
     field(g, 0, 0, W, H, W * r0, H * r0, function (u, v, out) {
       var x = u * W, y = v * H;
-      var d = segDist(x, y, GORGE) + (fbm(x * 0.01, y * 0.01, 2, 901) - 0.5) * 40;
-      // 地形：北高（山），谷边陡降
-      var hgt = (1 - v) * 0.6 + fbm(x * 0.004, y * 0.004, 4, 903) * 0.5;
-      var e = 2;
-      var h1 = (1 - v) * 0.6 + fbm((x - e * 6) * 0.004, (y - e * 6) * 0.004, 4, 903) * 0.5;
-      var lit = sat(0.55 + (h1 - hgt) * 18);
+      segDistSide(x, y, GORGE, D);
+      var d = D[0] + (fbm(x * 0.012, y * 0.012, 2, 901) - 0.5) * 36;
+      // 地形（北高），雪面的明暗
+      var hgt = (1 - v) * 0.6 + fbm(x * 0.004, y * 0.004, 4, 903) * 0.5, h1 = (1 - v - 0.012) * 0.6 + fbm((x - 12) * 0.004, (y - 12) * 0.004, 4, 903) * 0.5;
+      var lit = sat(0.55 + (h1 - hgt) * 20);
       var R, G, B;
       if (lit > 0.55) { var t = (lit - 0.55) / 0.45; R = bs[0] + (hi[0] - bs[0]) * t; G = bs[1] + (hi[1] - bs[1]) * t; B = bs[2] + (hi[2] - bs[2]) * t; }
       else { var t2 = (0.55 - lit) / 0.55; R = bs[0] + (sh[0] - bs[0]) * t2; G = bs[1] + (sh[1] - bs[1]) * t2; B = bs[2] + (sh[2] - bs[2]) * t2; }
-      // 杉林（北部的山与谷边成片；村子的台地上稀疏）
-      var cx0 = (x - 1020) / 700, cy0 = (y - 640) / 320, clr = Math.exp(-(cx0 * cx0 + cy0 * cy0) * 1.6);
-      var forest = sstep(0.5, 0.62, fbm(x * 0.006, y * 0.006, 3, 905) + (1 - v) * 0.3 - clr * 0.5 + sstep(160, 60, d) * 0.25);
-      if (forest > 0) { var fn = fbm(x * 0.05, y * 0.05, 2, 907); var fr = fz[0] + (fz2[0] - fz[0]) * fn, fg = fz[1] + (fz2[1] - fz[1]) * fn, fb = fz[2] + (fz2[2] - fz[2]) * fn; var k2 = forest * 0.75; R += (fr - R) * k2; G += (fg - G) * k2; B += (fb - B) * k2; }
-      // 雪葬谷：越近谷心越暗，谷底有雾
-      var gk = sstep(90, 10, d);
-      if (gk > 0) { var mist = fbm(x * 0.01, y * 0.02, 2, 909) * 0.4; R += (dk[0] + mist * 120 - R) * gk; G += (dk[1] + mist * 124 - G) * gk; B += (dk[2] + mist * 130 - B) * gk; }
-      var rim = sstep(110, 90, d) * (1 - gk) * 0.3; R *= 1 - rim; G *= 1 - rim; B *= 1 - rim * 0.7;
+      // 雪下的田块（村子周围）：转角网格，块与块之间有细细的田埂
+      var wq = (fbm(x * 0.004, y * 0.004, 2, 915) - 0.5) * 1.2, fx = (x * ca - y * sa) / 110 + wq, fy = (x * sa + y * ca) / 72 + wq * 0.6, fi = Math.floor(fx), fj = Math.floor(fy), ff = Math.min(fx - fi, 1 - (fx - fi), fy - fj, 1 - (fy - fj));
+      var cx0 = (x - 1020) / 760, cy0 = (y - 650) / 360, fieldA = sat(Math.exp(-(cx0 * cx0 + cy0 * cy0) * 1.4) * 1.6 - 0.3);
+      if (fieldA > 0) { var tone = (cellHash(fi, fj, 3) - 0.5) * 0.07, bank = sstep(0.04, 0, ff) * 0.1 * (cellHash(fi, fj, 9) < 0.7 ? 1 : 0); R *= 1 + tone - bank * fieldA; G *= 1 + tone - bank * fieldA; B *= 1 + tone * 0.6 - bank * fieldA * 0.6; }
+      // 杉林：暗色的树冠，带纹理（一团团的冠影）
+      var forest = sstep(0.5, 0.6, mapForest(x, y) + sstep(170, 70, D[0]) * 0.25);
+      if (forest > 0) {
+        var fn = fbm(x * 0.02, y * 0.02, 3, 907), crown = vn(x * 0.045, y * 0.045), cl = sat(fn * 0.8 + crown * 0.3 - 0.15);
+        var fr = fz[0] + (fz2[0] - fz[0]) * cl, fg = fz[1] + (fz2[1] - fz[1]) * cl, fb = fz[2] + (fz2[2] - fz[2]) * cl;
+        var sn2 = sstep(0.6, 0.8, crown) * 0.35; fr += (220 - fr) * sn2; fg += (226 - fg) * sn2; fb += (236 - fb) * sn2;   // 树冠上的雪
+        R += (fr - R) * forest; G += (fg - G) * forest; B += (fb - B) * forest;
+      }
+      // 雪葬谷：北壁（受光的岩与雪）、南壁（阴影），谷底的暗流与雾
+      if (d < 110) {
+        var w = 110, wallT = sat(1 - d / w);
+        var wr, wg, wb;
+        if (D[1] > 0) { var st = fbm(x * 0.05, y * 0.012, 2, 911); wr = wl[0] * (0.8 + st * 0.4); wg = wl[1] * (0.8 + st * 0.4); wb = wl[2] * (0.8 + st * 0.4); }
+        else { wr = ws[0]; wg = ws[1]; wb = ws[2]; }
+        var deep = sstep(0.55, 1, wallT);
+        wr += (dk[0] - wr) * deep; wg += (dk[1] - wg) * deep; wb += (dk[2] - wb) * deep;
+        var mist = sstep(0.8, 1, wallT) * fbm(x * 0.015, y * 0.03, 2, 913) * 0.6;
+        wr += (200 - wr) * mist; wg += (206 - wg) * mist; wb += (220 - wb) * mist;
+        var k2 = sstep(0, 0.25, wallT);
+        R += (wr - R) * k2; G += (wg - G) * k2; B += (wb - B) * k2;
+      }
       out[0] = R; out[1] = G; out[2] = B;
     });
-    // 树点（带雪的小杉）
+    // 树冠（矢量点画，加强林的质感）
     if (q.model >= 1) {
       var rt = RNG(911), dkP = [], snP = [];
-      for (var i = 0; i < K.byModel(q, 0, 1400, 2600); i++) {
-        var tx = rt() * W, ty = rt() * H, vv = ty / H, d2 = segDist(tx, ty, GORGE);
-        if (d2 < 40) continue;
-        var cxa = (tx - 1020) / 700, cya = (ty - 640) / 320, clr2 = Math.exp(-(cxa * cxa + cya * cya) * 1.6);
-        var f = fbm(tx * 0.006, ty * 0.006, 3, 905) + (1 - vv) * 0.3 - clr2 * 0.5 + (d2 < 160 ? 0.12 : 0);
-        if (f < 0.56) continue;
-        var ts = rt.range(3.5, 7); dkP.push(tx, ty, ts); snP.push(tx - 1, ty - ts * 0.5, ts * 0.6);
+      for (var i = 0; i < K.byModel(q, 0, 2400, 4200); i++) {
+        var tx = rt() * W, ty = rt() * H;
+        segDistSide(tx, ty, GORGE, D); if (D[0] < 50) continue;
+        if (mapForest(tx, ty) + (D[0] < 170 ? 0.12 : 0) < 0.58) continue;
+        var ts = rt.range(3, 6.5); dkP.push(tx, ty, ts); snP.push(tx - ts * 0.25, ty - ts * 0.25, ts * 0.55);
       }
-      // 俯视的雪杉：右下的影子 + 暗绿的树冠 + 左上一小片积雪
-      g.beginPath(); for (i = 0; i < dkP.length; i += 3) { g.moveTo(dkP[i] + dkP[i + 2] + 3, dkP[i + 1] + 3); g.arc(dkP[i] + 3, dkP[i + 1] + 3, dkP[i + 2], 0, TAU); } g.fillStyle = 'rgba(40,46,72,0.28)'; g.fill();
-      g.beginPath(); for (i = 0; i < dkP.length; i += 3) { var rr2 = dkP[i + 2]; g.moveTo(dkP[i] + rr2, dkP[i + 1]); for (var a5 = 1; a5 <= 8; a5++) { var an = a5 / 8 * TAU, rad = rr2 * (a5 % 2 ? 0.7 : 1); g.lineTo(dkP[i] + Math.cos(an) * rad, dkP[i + 1] + Math.sin(an) * rad); } } g.fillStyle = 'rgba(24,36,32,0.78)'; g.fill();
-      g.beginPath(); for (i = 0; i < snP.length; i += 3) { g.moveTo(snP[i] - 1 + snP[i + 2] * 0.7, snP[i + 1] + snP[i + 2] * 0.2); g.arc(snP[i] - 1, snP[i + 1] + snP[i + 2] * 0.2, snP[i + 2] * 0.7, 0, TAU); } g.fillStyle = 'rgba(232,236,246,0.55)'; g.fill();
+      g.beginPath(); for (i = 0; i < dkP.length; i += 3) { g.moveTo(dkP[i] + dkP[i + 2] + 2.5, dkP[i + 1] + 2.5); g.arc(dkP[i] + 2.5, dkP[i + 1] + 2.5, dkP[i + 2], 0, TAU); } g.fillStyle = 'rgba(10,16,20,0.35)'; g.fill();
+      g.beginPath(); for (i = 0; i < dkP.length; i += 3) { var rr2 = dkP[i + 2]; g.moveTo(dkP[i] + rr2, dkP[i + 1]); for (var a5 = 1; a5 <= 8; a5++) { var an = a5 / 8 * TAU, rad = rr2 * (a5 % 2 ? 0.65 : 1); g.lineTo(dkP[i] + Math.cos(an) * rad, dkP[i + 1] + Math.sin(an) * rad); } } g.fillStyle = 'rgba(28,42,38,0.9)'; g.fill();
+      g.beginPath(); for (i = 0; i < snP.length; i += 3) { g.moveTo(snP[i] + snP[i + 2], snP[i + 1]); g.arc(snP[i], snP[i + 1], snP[i + 2], 0, TAU); } g.fillStyle = 'rgba(226,232,244,0.6)'; g.fill();
     }
     // 谷缘的雪檐（白线）
     var off = [-62, 62];
@@ -3031,6 +3069,16 @@
     rp = [nodeP('bridge')[0], nodeP('bridge')[1], nodeP('store')[0], nodeP('store')[1], nodeP('road')[0], nodeP('road')[1], nodeP('inn')[0], nodeP('inn')[1], nodeP('shiramine')[0] + 60, nodeP('shiramine')[1] + 40, nodeP('jizo')[0], nodeP('jizo')[1] - 40];
     g.beginPath(); smoothPath(g, rp, false); strokeP(g, 'rgba(240,244,250,0.9)', 18); g.beginPath(); smoothPath(g, rp, false); strokeP(g, '#3c4250', 10);
     if (q.light >= 1) { g.beginPath(); smoothPath(g, rp, false); strokeP(g, 'rgba(150,160,190,0.35)', 3); }
+    // 沿村道成串的小屋（雪顶）
+    var hr = RNG(931);
+    for (i = 0; i + 3 < rp.length; i += 2) {
+      var ax = rp[i], ay = rp[i + 1], bx = rp[i + 2], by = rp[i + 3], len = Math.sqrt((bx - ax) * (bx - ax) + (by - ay) * (by - ay)), ang = Math.atan2(by - ay, bx - ax), cnt = Math.floor(len / 70);
+      for (var hk = 0; hk < cnt; hk++) {
+        var tt = (hk + 0.5) / cnt, hx = lerp(ax, bx, tt), hy = lerp(ay, by, tt), sd = hk % 2 ? 1 : -1, off = hr.range(30, 50);
+        if (hr() < 0.25) continue;
+        mapHouse(g, q, hx - Math.sin(ang) * off * sd, hy + Math.cos(ang) * off * sd, hr.range(22, 34), hr.range(16, 22), ang + hr.range(-0.2, 0.2), { lit: hr() < 0.3, lx: 0, ly: 0 });
+      }
+    }
     var trails = [['road', 'police'], ['road', 'school'], ['inn', 'mill'], ['inn', 'kumagai'], ['kumagai', 'bathhouse'], ['inn', 'clinic'], ['inn', 'sabakiya'], ['sabakiya', 'hall'], ['hall', 'watchtower'], ['watchtower', 'shrine'], ['hall', 'shiramine'], ['shiramine', 'fuyuki'], ['fuyuki', 'okurimon'], ['fuyuki', 'cemetery'], ['cemetery', 'jizo'], ['okurimon', 'charcoal'], ['shrine', 'charcoal']];
     g.save(); g.setLineDash && g.setLineDash([12, 8]);
     for (i = 0; i < trails.length; i++) {
@@ -3049,8 +3097,8 @@
     K.ellipse(g, tn[0], tn[1], 26, 16); fillP(g, '#16181e'); K.ellipse(g, tn[0], tn[1] - 4, 34, 22); strokeP(g, '#8a8c94', 5);
     // 各个地标
     mapLandmarks(g, q);
-    // 雪雾
-    if (q.light >= 1) { var rm = RNG(921); for (i = 0; i < K.byModel(q, 3, 6, 10); i++) { g.save(); g.translate(rm() * W, rm() * H); g.scale(1, 0.35); K.blob(g, 0, 0, rm.range(160, 340), '#f2f4f8', rm.range(0.12, 0.22)); g.restore(); } }
+    // 谷中的雾（只在峡谷里）
+    if (q.light >= 1) { for (i = 2; i < GORGE.length - 2; i += 4) { g.save(); g.translate(GORGE[i], GORGE[i + 1]); g.scale(1, 0.4); K.blob(g, 0, 0, 90, '#e8ecf4', 0.22); g.restore(); } }
     K.vignette(g, W, H, 0.45, 0.45);
   }
   // 俯视的雪顶小屋：屋顶白、背光坡偏蓝，屋檐下暗边，阴影朝右下
