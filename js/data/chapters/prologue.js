@@ -1629,8 +1629,11 @@ sayo[smile]: ……当然啦，侦探先生～
 @fade out
 @bgm stop
 @bg black
+// （技术修正）引擎的黑场遮罩在标题卡之上，先在黑底上淡入，标题卡才看得见
+@fade in
 @wait 800
 @title 雪之间|一
+@fade out
 @bg charcoal_hut past
 @filter dark
 @weather none
@@ -1673,6 +1676,8 @@ gonzo{老人}: 山神不收的人，就得自己活下去。
 @fade out
 @weather none
 @filter none
+@bg black
+@fade in
 @chapterend
 `
 });
