@@ -18,8 +18,8 @@ var shotsDir = (function () { var i = args.indexOf('--shots'); return i >= 0 ? a
 var maxSteps = (function () { var i = args.indexOf('--max'); return i >= 0 ? +args[i + 1] : 20000; })();
 var all = args.indexOf('--all') >= 0;   // 章节结束后继续下一章
 function opt(name) { var i = args.indexOf(name); return i >= 0 ? args[i + 1] : null; }
-var dropEv = (opt('--drop') || '').split(',').filter(Boolean), beWant = opt('--be'), ftPref = (opt('--ft') || '').split(',').filter(Boolean), skipOpt = (opt('--skip-optional') || '').split(',').filter(Boolean);
-var pixel = args.indexOf('--pixel') >= 0, resOpt = opt('--res');
+var setBond = (opt('--bond') || '').split(',').filter(Boolean), dropEv = (opt('--drop') || '').split(',').filter(Boolean), beWant = opt('--be'), ftPref = (opt('--ft') || '').split(',').filter(Boolean), skipOpt = (opt('--skip-optional') || '').split(',').filter(Boolean);
+var thorough = args.indexOf('--thorough') >= 0, pixel = args.indexOf('--pixel') >= 0, resOpt = opt('--res');
 
 (async function () {
   var browser = await chromium.launch();
@@ -34,7 +34,7 @@ var pixel = args.indexOf('--pixel') >= 0, resOpt = opt('--res');
   }, { pixel: pixel, res: resOpt, prefix: fs.existsSync(path.resolve(__dirname, '..', 'js/data/game.js')) ? (/storage:\s*'([^']+)'/.exec(fs.readFileSync(path.resolve(__dirname, '..', 'js/data/game.js'), 'utf8')) || [0, 'darkmood_'])[1] : 'darkmood_' });
   await page.goto(url);
   await page.waitForTimeout(1200);
-  await page.evaluate(function (o) { DM.State.settings.textSpeed = 3; DM.State.settings.shake = false; window.__AP = o; }, { be: beWant, ft: ftPref, skip: skipOpt, drop: dropEv });
+  await page.evaluate(function (o) { DM.State.settings.textSpeed = 3; DM.State.settings.shake = false; window.__AP = o; }, { be: beWant, ft: ftPref, skip: skipOpt, drop: dropEv, bond: setBond, thorough: thorough });
   if (shotsDir) fs.mkdirSync(shotsDir, { recursive: true });
 
   var t0 = Date.now(), steps = 0, shot = 0, stuck = 0, lastSig = '', chaptersSeen = [chapter], ended = false;
@@ -76,6 +76,7 @@ function step() {
   var sigBase = St.s ? (St.s.prog + ':' + St.s.ip) : 'none';
   var res = function (act, extra) { var o = { act: act, extra: extra, chapter: St.s && St.s.chapter, sig: sigBase + ':' + act + ':' + (extra || '') }; return o; };
   var AP = window.__AP || {};
+  if (AP.bond && AP.bond.length && St.s) AP.bond.forEach(function (b) { var kv = b.split('='); if ((St.s.bonds[kv[0]] || 0) < +kv[1]) St.s.bonds[kv[0]] = +kv[1]; });
   if (AP.drop && AP.drop.length && St.s) St.s.ev = St.s.ev.filter(function (e) { return AP.drop.indexOf(e) < 0; });
 
   if (document.querySelector('.credits')) return res('credits');
@@ -204,6 +205,13 @@ function step() {
       if (!f._tour[p]) { f.place = p; DM.Explore.open(); return res('explore', p); }
     }
     var fin2 = Array.from(ex.querySelectorAll('.topbar .btn')).find(function (b) { return b.classList.contains('gold'); });
+    if (fin2 && AP.thorough && !f._thoroughDone) {
+      // 像细心的玩家一样，结束前把每个调查点再看一遍
+      f._thoroughDone = true;
+      Object.keys(St.s.visited).forEach(function (k) { if (k.indexOf(f.id + ':') === 0) delete St.s.visited[k]; });
+      delete f._tour; DM.Explore.open();
+      return res('explore_thorough');
+    }
     if (fin2) { delete f._tour; delete f._rounds; click(fin2); return res('explore_done'); }
     var missing = ((def.done || {}).need || []).filter(function (n) { return n.indexOf('flag:') === 0 ? !St.flag(n.slice(5)) : !St.hasEv(n); });
     // 像玩家一样再仔细看一遍：清空已调查标记，最多重来 3 轮
