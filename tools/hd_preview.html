@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><title>HD 美术预览</title>
+<style>
+body{background:#111;color:#ccc;font:13px sans-serif;margin:10px}
+.item{display:inline-block;margin:6px;vertical-align:top;background:#000;position:relative}
+.item canvas{display:block}
+.lb{padding:3px 6px;background:#222}
+.anc{position:absolute;border:1px solid rgba(255,80,80,.8);color:#f88;font-size:10px;pointer-events:none}
+.lt{position:absolute;border:1px dashed rgba(255,220,80,.9);border-radius:50%;pointer-events:none}
+#bar{position:sticky;top:0;background:#222;padding:6px;z-index:9}
+</style></head><body>
+<div id="bar"></div>
+<div id="out"></div>
+<script>
+/* 用法（file:// 打开）：
+ *   hd_preview.html?kind=bg&ids=study,hall&s=0.5&q=2&anchors=1&lights=1&filter=night
+ *   hd_preview.html?kind=pt&ids=ritsu,shio&exprs=all&s=0.6
+ *   hd_preview.html?kind=sp   (全部小人)     kind=ic (全部图标)
+ * 参数：s 倍率（1=1920x1080）  q 同时设置 model/tex/light；或分别用 model= tex= light=
+ *       w= 显示宽度（CSS 像素，默认按 s）  variants=1 同时显示所有变体
+ */
+var P = new URLSearchParams(location.search);
+var ROOT = '../';
+var base = ['js/data/characters.js', 'js/data/locations.js', 'js/hd/manifest.js'];
+function load(list, done) {
+  var i = 0;
+  (function next() {
+    if (i >= list.length) return done();
+    var s = document.createElement('script'); s.src = ROOT + list[i++];
+    s.onload = next; s.onerror = function () { console.warn('缺少 ' + s.src); next(); };
+    document.head.appendChild(s);
+  })();
+}
+load(base, function () { load(DM.HD_FILES, run); });
+function run() {
+  var K = DM.HK, A = DM.HDArt;
+  var s = +(P.get('s') || 0.5), qa = P.get('q');
+  var q = { s: s, model: +(P.get('model') || qa || 2), tex: +(P.get('tex') || qa || 2), light: +(P.get('light') || qa || 2) };
+  A.setQuality(q, 2048);
+  var kind = P.get('kind') || 'bg';
+  var out = document.getElementById('out');
+  document.getElementById('bar').textContent = 'kind=' + kind + '  s=' + s + '  model/tex/light=' + q.model + '/' + q.tex + '/' + q.light;
+  function add(c, label, ms, dispW, extra) {
+    var d = document.createElement('div'); d.className = 'item';
+    var w = dispW || c.width; c.style.width = w + 'px';
+    d.appendChild(c);
+    var lb = document.createElement('div'); lb.className = 'lb'; lb.textContent = label + (ms != null ? '  ' + ms.toFixed(1) + 'ms' : '') + '  ' + c.width + 'x' + c.height;
+    d.appendChild(lb); out.appendChild(d);
+    if (extra) extra(d, w / K.DW);
+  }
+  function t() { return performance.now(); }
+  var ids = P.get('ids');
+  if (kind === 'bg') {
+    var list = ids ? ids.split(',') : Object.keys(DM.LOCS);
+    list.forEach(function (id) {
+      var vs = [''];
+      if (P.get('variants') && DM.BG_VARIANTS && DM.BG_VARIANTS[id]) vs = vs.concat(DM.BG_VARIANTS[id]);
+      vs.forEach(function (v) {
+        var t0 = t(), c = A.getBackground(id, v), ms = t() - t0;
+        var cv = document.createElement('canvas'); cv.width = c.width; cv.height = c.height;
+        var x = cv.getContext('2d'); x.drawImage(c, 0, 0);
+        var f = P.get('filter');
+        if (f === 'night') { x.globalCompositeOperation = 'multiply'; x.fillStyle = '#4a5898'; x.fillRect(0, 0, cv.width, cv.height); x.globalCompositeOperation = 'source-over'; }
+        if (P.get('lights') || f === 'night') {
+          var m = A.meta(id, v), k = cv.width / K.DW;
+          x.save(); x.scale(k, k);
+          m.lights.forEach(function (L) { K.glow(x, L.x, L.y, L.r || 120, L.color || '#ffb060', (L.i || 0.6) * (f === 'night' ? 1 : 0.5)); });
+          x.restore();
+        }
+        add(cv, id + (v ? ':' + v : ''), ms, +(P.get('w') || Math.min(960, c.width)), function (d, k) {
+          if (P.get('anchors')) {
+            var an = (DM.LOCS[id] || {}).anchors || {};
+            Object.keys(an).forEach(function (n) {
+              var a = an[n], e = document.createElement('div'); e.className = 'anc';
+              e.style.left = a[0] * 4 * k + 'px'; e.style.top = a[1] * 4 * k + 'px'; e.style.width = a[2] * 4 * k + 'px'; e.style.height = a[3] * 4 * k + 'px';
+              e.textContent = n; d.appendChild(e);
+            });
+          }
+          if (P.get('lights')) {
+            A.meta(id, v).lights.forEach(function (L) {
+              var e = document.createElement('div'); e.className = 'lt'; var r = (L.r || 120) * k;
+              e.style.left = (L.x * k - r) + 'px'; e.style.top = (L.y * k - r) + 'px'; e.style.width = e.style.height = 2 * r + 'px'; d.appendChild(e);
+            });
+          }
+        });
+      });
+    });
+  } else if (kind === 'pt') {
+    var chars = ids ? ids.split(',') : Object.keys(DM.CHARS);
+    var ex = P.get('exprs') === 'all' ? DM.EXPRS : (P.get('exprs') || 'normal').split(',');
+    chars.forEach(function (id) { ex.forEach(function (e) { var t0 = t(), c = A.getPortrait(id, e); add(c, id + ':' + e, t() - t0, +(P.get('w') || Math.min(320, c.width))); }); });
+  } else if (kind === 'sp') {
+    (ids ? ids.split(',') : Object.keys(DM.CHARS)).forEach(function (id) { var t0 = t(), c = A.getSprite(id); add(c, id, t() - t0, +(P.get('w') || 96)); });
+  } else if (kind === 'ic') {
+    var icons = ids ? ids.split(',') : Object.keys(DM.HDIcon.defs);
+    icons.forEach(function (id) { var t0 = t(), c = A.getIcon(id); add(c, id, t() - t0, 96); });
+  }
+  document.title = 'done';
+  window.PREVIEW_DONE = true;
+}
+</script></body></html>
