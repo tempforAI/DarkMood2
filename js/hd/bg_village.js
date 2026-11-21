@@ -629,6 +629,34 @@
     g.strokeStyle = 'rgba(255,255,255,0.5)'; g.lineWidth = 1; g.stroke();
     g.restore();
   }
+  // 踩出来的雪径：沿中线（近→远）的带状凹陷，边缘有翻起的雪，里面有凌乱的脚印凹坑
+  function trodPath(g, q, pts, w0, w1, seed, o) {
+    o = o || {};
+    var r = RNG(seed || 1), n = pts.length / 2, L = [], R = [], i;
+    for (i = 0; i < n; i++) {
+      var t = i / (n - 1), x = pts[i * 2], y = pts[i * 2 + 1], nx = pts[Math.min(n - 1, i + 1) * 2] - pts[Math.max(0, i - 1) * 2], ny = pts[Math.min(n - 1, i + 1) * 2 + 1] - pts[Math.max(0, i - 1) * 2 + 1];
+      var l = Math.sqrt(nx * nx + ny * ny) || 1, w = lerp(w0, w1, t) * r.range(0.9, 1.1);
+      L.push(x - ny / l * w, y + nx / l * w * 0.35); R.push(x + ny / l * w, y - nx / l * w * 0.35);
+    }
+    var poly = L.concat(revPts(R));
+    smoothPath(g, poly, true); fillP(g, K.lin(g, 0, pts[1], 0, pts[n * 2 - 1], [o.near || '#c3c9da', o.far || '#ccd2e0']));
+    // 两侧翻起的雪埂（受光的白边）
+    g.beginPath(); smoothPath(g, L, false); strokeP(g, 'rgba(250,252,255,0.85)', Math.max(2, w0 * 0.08));
+    g.beginPath(); smoothPath(g, R, false); strokeP(g, K.rgba(SN.shd, 0.4), Math.max(2, w0 * 0.07));
+    // 脚印凹坑
+    if (o.prints !== false) {
+      g.beginPath();
+      var m = K.byModel(q, 8, 16, 26);
+      for (i = 0; i < m; i++) {
+        var tt = r(), k = Math.min(n - 2, Math.floor(tt * (n - 1))), f = tt * (n - 1) - k;
+        var px = lerp(pts[k * 2], pts[k * 2 + 2], f) + r.range(-0.6, 0.6) * lerp(w0, w1, tt), py = lerp(pts[k * 2 + 1], pts[k * 2 + 3], f) + r.range(-0.2, 0.2) * lerp(w0, w1, tt) * 0.35;
+        var sz = lerp(w0, w1, tt) * 0.16;
+        g.moveTo(px + sz, py); g.ellipse ? g.ellipse(px, py, sz, sz * 0.45, r.range(-0.4, 0.4), 0, TAU) : g.arc(px, py, sz, 0, TAU);
+      }
+      g.fillStyle = K.rgba(SN.shd, 0.35); g.fill();
+    }
+    return poly;
+  }
   // 积雪盖：沿物体上缘（折线，左→右）堆一层圆润的雪，两端略悬出，下缘有少量垂坠。o = { over, seed, lit, drip, step, col }
   function snowCap(g, q, pts, th, o) {
     o = o || {};
@@ -1481,25 +1509,18 @@
     // 两个更衣棚
     smallHut(g, q, 80, 330, 300, 210, '#2a3a6a', 5005, false);
     smallHut(g, q, 1540, 330, 300, 210, '#a03040', 5007, true);
+    // 小路（踏出来的雪径）
+    trodPath(g, q, [90, 1100, 140, 990, 210, 910, 280, 880], 110, 56, 5017);
+    trodPath(g, q, [1830, 1100, 1780, 990, 1710, 910, 1640, 880], 110, 56, 5019);
     // 池子
-    var mp = poolShape(470, 790, 330, 96, 5011), wp = poolShape(1450, 790, 330, 96, 5013);
-    onsenPool(g, q, mp, 470, 790, 330, 96, 21);
-    onsenPool(g, q, wp, 1450, 790, 330, 96, 23);
+    var mp = poolShape(560, 772, 380, 118, 5011), wp = poolShape(1370, 772, 380, 118, 5013);
+    onsenPool(g, q, wp, 1370, 772, 380, 118, 23);
+    // 竹篱：从后方一直延伸到两池之间（透视），下缘离水面留出一道缝
+    drawBambooFence(g, q);
+    onsenPool(g, q, mp, 560, 772, 380, 118, 21);
     drawRockLedge(g, q);
-    // 竹篱（下方有缝）
-    drawBambooFence(g, q, 870, 196, 1050, 600);
-    // 篱下的缝：看得见篱后那一边的池缘与水面
-    rectP(g, 900, 600, 120, 116); fillP(g, K.lin(g, 0, 600, 0, 716, ['#1e2428', '#3a5054']));
-    g.save(); rectP(g, 900, 600, 120, 116); g.clip(); K.blob(g, 960, 690, 70, '#9cc0bc', 0.5); g.restore();
     // 溢流的小水沟汇成汤川
     drawYukawaBath(g, q);
-    // 小路（踏出来的雪径与踏脚石）
-    var paths = [[[40, 1090, 120, 960, 220, 890, 300, 870], 1], [[1880, 1090, 1800, 960, 1700, 890, 1620, 870], 1]];
-    for (i = 0; i < paths.length; i++) {
-      var P = paths[i][0];
-      g.beginPath(); smoothPath(g, P, false); strokeP(g, K.rgba(SN.sh, 0.7), 70); g.beginPath(); smoothPath(g, P, false); strokeP(g, '#c8cede', 54);
-      for (var k = 0; k < 4; k++) { var t = (k + 0.5) / 4, sx = lerp(P[0], P[6], t), sy = lerp(P[1], P[7], t * t * 0.4 + t * 0.6); K.ellipse(g, sx, sy, 34 - k * 4, 12 - k); fillP(g, '#6a6c76'); K.ellipse(g, sx, sy - 4, 30 - k * 4, 8 - k); fillP(g, K.lin(g, 0, sy - 12, 0, sy, ['#f0f3f8', '#c8cede'])); }
-    }
     // 蒸汽
     steam(g, q, 160, 560, 620, 280, 26, 5021, 0.24);
     steam(g, q, 1140, 560, 620, 280, 26, 5023, 0.24);
@@ -1507,46 +1528,57 @@
     K.vignette(g, W, H, q.light >= 1 ? 0.4 : 0.3, 0.5);
   }
   function drawRockLedge(g, q) {
-    // 男汤池边向池心倾斜的岩台：斜面上覆着滑溜的白色汤花
-    var pts = [236, 600, 330, 540, 470, 530, 600, 600, 590, 640, 440, 668, 300, 660];
-    if (q.light >= 1) { K.poly(g, [300, 662, 590, 642, 610, 676, 320, 690]); fillP(g, 'rgba(20,40,44,0.35)'); }
-    K.poly(g, pts); mat(g, q, '#4a4c54', 'rock', ROCK, 160, 0, 0);
-    K.poly(g, pts); fillP(g, K.lin(g, 300, 530, 560, 668, ['rgba(255,255,255,0.15)', 'rgba(0,0,0,0)', 'rgba(0,10,20,0.35)']));
-    // 汤花（白黄色的沉积，斜面下半部最厚）
+    // 男汤池边向池心倾斜的岩台：后高前低，前缘没入水中，斜面上覆着滑溜的白色汤花
+    var top = [246, 586, 360, 540, 500, 534, 596, 574];
+    var pts = top.concat([610, 640, 520, 662, 380, 668, 262, 640]);
+    // 岩台的侧面（厚度）
+    K.poly(g, [246, 586, 262, 640, 268, 664, 238, 606]); fillP(g, '#2a2c34');
+    K.poly(g, pts); mat(g, q, '#50525a', 'rock', ROCK, 160, 0, 0);
+    K.poly(g, pts); fillP(g, K.lin(g, 300, 534, 520, 668, ['rgba(255,255,255,0.16)', 'rgba(0,0,0,0)', 'rgba(0,16,24,0.35)']));
     g.save(); K.poly(g, pts); g.clip();
     var r = RNG(5031);
-    for (var i = 0; i < K.byModel(q, 6, 12, 20); i++) { var bx = r.range(300, 590), by = r.range(590, 668); g.save(); g.translate(bx, by); g.scale(1, 0.35); K.blob(g, 0, 0, r.range(30, 70), '#ece6c8', 0.6); g.restore(); }
-    if (q.light >= 2) { g.strokeStyle = 'rgba(255,255,255,0.55)'; g.lineWidth = 2; g.beginPath(); for (i = 0; i < 6; i++) { var sx = r.range(320, 560), sy = r.range(600, 650); g.moveTo(sx, sy); g.lineTo(sx + r.range(16, 40), sy + r.range(2, 8)); } g.stroke(); }
+    for (var i = 0; i < K.byModel(q, 6, 12, 20); i++) { var bx = r.range(280, 600), by = r.range(580, 666); g.save(); g.translate(bx, by); g.scale(1, 0.35); K.blob(g, 0, 0, r.range(30, 70), '#ece6c8', 0.6); g.restore(); }
+    // 前缘没入水中：水面的半透明覆盖
+    g.fillStyle = K.lin(g, 0, 632, 0, 668, ['rgba(143,180,178,0)', 'rgba(143,180,178,0.75)']); g.fillRect(240, 632, 380, 40);
+    if (q.light >= 2) { g.strokeStyle = 'rgba(255,255,255,0.55)'; g.lineWidth = 2; g.beginPath(); for (i = 0; i < 7; i++) { var sx = r.range(300, 570), sy = r.range(570, 630); g.moveTo(sx, sy); g.lineTo(sx + r.range(16, 40), sy + r.range(2, 9)); } g.stroke(); }
     g.restore();
-    // 岩台背后的雪
-    snowCap(g, q, [236, 600, 330, 540, 470, 530], 18, { seed: 5033, over: 10 });
+    // 水线
+    g.beginPath(); g.moveTo(258, 634); g.quadraticCurveTo(430, 646, 608, 632); strokeP(g, 'rgba(220,236,234,0.6)', 2);
+    snowCap(g, q, [236, 588, 350, 542, 470, 534], 16, { seed: 5033, over: 10 });
   }
-  function drawBambooFence(g, q, x0, top, x1, bot) {
-    var n = K.byModel(q, 12, 18, 24), w = (x1 - x0) / n, r = RNG(5041);
-    if (q.light >= 1) { K.poly(g, [x1, top + 10, x1 + 26, top + 26, x1 + 26, bot, x1, bot]); fillP(g, 'rgba(20,24,40,0.25)'); }
-    for (var i = 0; i < n; i++) {
-      var bx = x0 + i * w, bt = top + r.range(-8, 6);
-      rectP(g, bx + 0.5, bt, w - 1, bot - bt); fillP(g, K.lin(g, bx, 0, bx + w, 0, ['#c4b47a', '#a08e58', '#6a5c38']));
-      // 竹节
-      g.fillStyle = 'rgba(70,60,36,0.6)'; for (var k = bt + 40 + r.range(0, 30); k < bot; k += 90) g.fillRect(bx + 0.5, k, w - 1, 3);
+  function drawBambooFence(g, q) {
+    // 近端柱在 x=1048（高 200→600），远端在 x=890（矮）；我们从右前方看到竹篱的一面
+    var nx = 1048, ntop = 196, nbot = 600, fx = 892, ftop = 300, fbot = 520, n = K.byModel(q, 12, 18, 26), r = RNG(5041), i;
+    function at(t) { return [lerp(nx, fx, t), lerp(ntop, ftop, t), lerp(nbot, fbot, t)]; }
+    // 篱下的缝：看得见篱后（女汤侧）的池缘与蒸汽
+    K.poly(g, [nx, nbot, fx, fbot, fx, fbot + 64, nx, nbot + 118]); fillP(g, K.lin(g, 0, fbot, 0, nbot + 118, ['#2a3438', '#4e6a6c']));
+    g.save(); K.poly(g, [nx, nbot, fx, fbot, fx, fbot + 64, nx, nbot + 118]); g.clip(); K.blob(g, 980, 650, 90, '#a8c8c4', 0.5); K.blob(g, 940, 600, 60, '#eef2f6', 0.35); g.restore();
+    if (q.light >= 1) { K.poly(g, [nx, nbot, fx, fbot, fx, fbot + 10, nx, nbot + 18]); fillP(g, 'rgba(0,0,0,0.45)'); }
+    // 竹竿（随透视变短变密）
+    for (i = n - 1; i >= 0; i--) {
+      var t0 = i / n, t1 = (i + 1) / n, a = at(t0), b = at(t1), jt = r.range(-6, 4) * (1 - t0);
+      K.poly(g, [a[0], a[1] + jt, b[0], b[1] + jt, b[0], b[2], a[0], a[2]]);
+      fillP(g, K.lin(g, a[0], 0, b[0], 0, ['#cbbb80', '#a8955c', '#76683e']));
+      if (q.model >= 1) { g.fillStyle = 'rgba(70,60,36,0.55)'; for (var k = 0; k < 4; k++) { var f = (k + 0.4 + r() * 0.3) / 4.4; g.fillRect(b[0], lerp(a[1], a[2], f), a[0] - b[0], 3 * (1 - t0 * 0.5)); } }
     }
-    // 横杆与棕绳
-    var rails = [top + 70, top + 210, bot - 60];
+    // 横杆与棕绳（三道）
+    var rails = [0.16, 0.5, 0.86];
     for (i = 0; i < rails.length; i++) {
-      rectP(g, x0 - 10, rails[i], x1 - x0 + 20, 14); fillP(g, K.lin(g, 0, rails[i], 0, rails[i] + 14, ['#8a7848', '#5a4c2c']));
-      g.strokeStyle = '#2a1e14'; g.lineWidth = 3; g.beginPath(); for (var bx2 = x0 + w; bx2 < x1; bx2 += w * 3) { g.moveTo(bx2 - 6, rails[i] - 3); g.lineTo(bx2 + 6, rails[i] + 17); g.moveTo(bx2 + 6, rails[i] - 3); g.lineTo(bx2 - 6, rails[i] + 17); } g.stroke();
+      var f2 = rails[i], ya = lerp(ntop, nbot, f2), yb = lerp(ftop, fbot, f2);
+      K.poly(g, [nx + 10, ya - 7, fx - 6, yb - 5, fx - 6, yb + 5, nx + 10, ya + 7]); fillP(g, '#7a6a40');
+      snowCap(g, q, [fx - 6, yb - 5, nx + 10, ya - 7], 6, { seed: 5045 + i, over: 3, step: 40 });
     }
-    // 竹篱顶与横杆上的雪
-    snowCap(g, q, [x0 - 6, top - 4, x1 + 6, top - 4], 22, { seed: 5043, over: 8 });
-    for (i = 0; i < rails.length; i++) snowCap(g, q, [x0 - 10, rails[i], x1 + 10, rails[i]], 7, { seed: 5045 + i, over: 4 });
-    // 两侧的柱
-    for (i = 0; i < 2; i++) { var px = i ? x1 + 4 : x0 - 16; rectP(g, px, top - 20, 14, bot - top + 140); fillP(g, '#3a2e24'); snowCap(g, q, [px - 3, top - 20, px + 17, top - 20], 8, { seed: 5049 + i, over: 3 }); }
+    // 柱与顶上的积雪
+    rectP(g, nx - 2, ntop - 24, 18, nbot - ntop + 150); fillP(g, K.lin(g, nx, 0, nx + 18, 0, ['#5a4632', '#2a2018']));
+    rectP(g, fx - 10, ftop - 14, 12, fbot - ftop + 80); fillP(g, '#3a2e24');
+    snowCap(g, q, [fx - 10, ftop - 6, nx + 18, ntop - 8], 20, { seed: 5043, over: 8, step: 30 });
+    snowCap(g, q, [nx - 6, ntop - 26, nx + 20, ntop - 26], 9, { seed: 5049, over: 4 });
   }
   function drawYukawaBath(g, q) {
     // 两池的溢流沟从左右两侧向下汇合，成为画面下方冒热气的小溪「汤川」
     var r = RNG(5051), i;
-    var chL = [700, 870, 780, 930, 860, 980, 900, 1090], chR = [1220, 870, 1140, 930, 1060, 980, 1020, 1090];
-    for (var k = 0; k < 2; k++) { var P = k ? chR : chL; g.beginPath(); smoothPath(g, P, false); strokeP(g, '#d6dce8', 70); g.beginPath(); smoothPath(g, P, false); strokeP(g, '#3c5258', 38); g.beginPath(); smoothPath(g, P, false); strokeP(g, 'rgba(160,200,196,0.4)', 14); }
+    var chL = [740, 860, 800, 920, 850, 970, 880, 1020], chR = [1180, 860, 1120, 920, 1070, 970, 1040, 1020];
+    for (var k = 0; k < 2; k++) { var P = k ? chR : chL; g.beginPath(); smoothPath(g, P, false); strokeP(g, K.rgba(SN.shd, 0.5), 34); g.beginPath(); smoothPath(g, P, false); strokeP(g, '#3c5458', 22); g.beginPath(); smoothPath(g, P, false); strokeP(g, 'rgba(170,206,202,0.45)', 6); }
     var bed = [800, 1090, 840, 990, 900, 960, 1020, 960, 1080, 990, 1120, 1090];
     smoothPath(g, bed, true); fillP(g, K.lin(g, 0, 960, 0, H, ['#4a6266', '#2e3e42']));
     g.save(); smoothPath(g, bed, true); g.clip();
@@ -1577,11 +1609,14 @@
     snowField(g, q, 0, 560, W, 520, { yh: 470, seed: 5103, amp: 0.9, fog: 140 });
     drawMillHut(g, q);
     drawFlume(g, q);
+    // 水车下的木槽（冻住）
+    K.poly(g, [60, 760, 700, 760, 720, 900, 40, 900]); fillP(g, '#3a2e24');
+    K.poly(g, [76, 772, 684, 772, 700, 892, 60, 892]); fillP(g, K.lin(g, 0, 772, 0, 892, ['#c4d2e6', '#9aaccc']));
     drawWheel(g, q);
+    snowCap(g, q, [40, 760, 720, 760], 14, { seed: 5108, over: 8 });
     drawChannel(g, q);
     // 小屋门前的小路与脚印
-    g.beginPath(); smoothPath(g, [790, 1090, 880, 960, 980, 880, 1040, 830], false); strokeP(g, K.rgba(SN.sh, 0.6), 110); g.beginPath(); smoothPath(g, [790, 1090, 880, 960, 980, 880, 1040, 830], false); strokeP(g, '#ccd2e0', 92);
-    for (i = 0; i < 9; i++) { var t = i / 9, fx = lerp(820, 1030, t) + (i % 2 ? 12 : -12), fy = lerp(1060, 840, t); K.ellipse(g, fx, fy, 12 - t * 5, 6 - t * 2.5, -0.3); fillP(g, K.rgba(SN.shd, 0.45)); }
+    trodPath(g, q, [900, 1100, 950, 990, 1000, 900, 1030, 828], 120, 60, 5107);
     sparkle(g, q, 0, 560, 1140, 520, 200, 5105);
     K.vignette(g, W, H, q.light >= 1 ? 0.42 : 0.3, 0.5);
   }
@@ -1600,7 +1635,7 @@
     rectP(g, cut, top + 40, x1 - cut, floor - top - 40); mat(g, q, '#2e2620', 'wood', DARK_WOOD, 160, cut, top);
     rectP(g, cut, top + 40, x1 - cut, floor - top - 40); fillP(g, K.lin(g, 0, top, 0, floor, ['rgba(0,0,10,0.55)', 'rgba(0,0,10,0.25)', 'rgba(0,0,10,0.45)']));
     // 屋内的小窗（冷光）
-    var wx = 1700, wy = 270;
+    var wx = 1690, wy = 372;
     rectP(g, wx, wy, 120, 86); fillP(g, K.lin(g, 0, wy, 0, wy + 86, ['#c4cad8', '#9aa2b6']));
     g.strokeStyle = '#1a140e'; g.lineWidth = 6; g.strokeRect(wx, wy, 120, 86); K.line(g, wx + 60, wy, wx + 60, wy + 86, 5, '#1a140e');
     if (q.light >= 1) { K.glow(g, wx + 60, wy + 43, 180, '#b8c4dc', 0.18); }
@@ -1749,7 +1784,7 @@
   DM.HDBG.def('watermill', {
     outdoor: true,
     draw: function (g, q) { drawWatermill(g, q); },
-    lights: [{ x: 1760, y: 313, r: 160, color: '#b8c4dc', i: 0.35, flicker: 0, kind: 'window' }],
+    lights: [{ x: 1750, y: 415, r: 160, color: '#b8c4dc', i: 0.35, flicker: 0, kind: 'window' }],
     key: { x: -0.4, color: '#dde2ee', amb: '#4a5066', rim: 0.35 }
   });
 

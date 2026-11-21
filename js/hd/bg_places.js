@@ -1392,7 +1392,7 @@
         g.strokeStyle = 'rgba(40,40,50,0.6)'; g.lineWidth = 1; for (var c = 0; c <= 6; c++) { g.beginPath(); g.moveTo(px + 10 + c * 30, py + 24); g.lineTo(px + 10 + c * 30, py + ph - 6); g.stroke(); } for (var r = 0; r <= 3; r++) { g.beginPath(); g.moveTo(px + 10, py + 24 + r * 16); g.lineTo(px + 190, py + 24 + r * 16); g.stroke(); }
       }, '#efe8d4');
     })();
-    wallClock(g, q, 1436, 230, 36, 3, 15);
+    wallClock(g, q, 452, 214, 34, 3, 15);
     // ---- 黑板（锚点 544-1384, 144-432）：最后一届孩子留下的字 ----
     (function board() {
       var x = 556, y = 156, w = 816, h = 266;
@@ -1410,7 +1410,10 @@
         for (var n = 0; n < names.length; n++) K.text(g, names[n], x + 90 + n * 120, y + 200 + (n % 2) * 12, 24, n % 2 ? 'rgba(255,200,200,0.7)' : 'rgba(240,244,236,0.7)');
         // 雪人与白蛾的涂鸦
         g.strokeStyle = chalk; g.lineWidth = 3;
-        g.beginPath(); g.arc(x + w - 110, y + 180, 26, 0, TAU); g.stroke(); g.beginPath(); g.arc(x + w - 110, y + 138, 18, 0, TAU); g.stroke();
+        g.beginPath(); g.arc(x + w - 110, y + 186, 28, 0, TAU); g.stroke(); g.beginPath(); g.arc(x + w - 110, y + 140, 19, 0, TAU); g.stroke();
+        g.beginPath(); g.moveTo(x + w - 138, y + 180); g.lineTo(x + w - 162, y + 166); g.moveTo(x + w - 82, y + 180); g.lineTo(x + w - 58, y + 166); g.stroke();
+        g.fillStyle = chalk; g.beginPath(); g.arc(x + w - 117, y + 136, 2.5, 0, TAU); g.arc(x + w - 103, y + 136, 2.5, 0, TAU); g.fill();
+        g.beginPath(); g.moveTo(x + w - 130, y + 124); g.lineTo(x + w - 90, y + 124); g.lineTo(x + w - 96, y + 106); g.lineTo(x + w - 124, y + 106); g.closePath(); g.stroke();
         K.path(g, 'M0 0 C-10 -14 -32 -16 -36 -4 C-32 8 -14 8 0 2 C14 8 32 8 36 -4 C32 -16 10 -14 0 0 Z', x + w - 110, y + 64, 1); g.stroke();
         g.beginPath(); g.moveTo(x + w - 114, y + 60); g.lineTo(x + w - 124, y + 44); g.moveTo(x + w - 106, y + 60); g.lineTo(x + w - 96, y + 44); g.stroke();
       }
@@ -1496,12 +1499,13 @@
     snowDrift(g, q, [1480, R.bot + 8, 1600, R.bot - 2, 1720, R.bot + 4, 1800, R.bot + 30, 1640, R.bot + 50, 1460, R.bot + 30]);
     // 废弃的煤炉（达摩炉），冷的
     if (q.model > 0) {
-      var sx = 1720, sb = 960;
+      var sx = 1436, sb = 900;
       if (q.light > 0) K.contact(g, sx, sb, 70, 12, 0.6);
       g.fillStyle = K.lin(g, 0, 0, 0, 0, ['#000', '#000']);
       g.fillStyle = K.lin(g, sx - 50, 0, sx + 50, 0, ['#1a1a1e', '#4a4a52', '#141416']);
       K.path(g, 'M-34 0 L-40 -40 C-52 -80 -48 -130 -30 -150 L30 -150 C48 -130 52 -80 40 -40 L34 0 Z', sx, sb, 1); g.fill();
-      g.fillStyle = '#26262a'; g.fillRect(sx - 12, sb - 210, 24, 60); g.fillRect(sx - 12, 120, 24, sb - 330);
+      g.fillStyle = K.lin(g, sx - 12, 0, sx + 12, 0, ['#1a1a1e', '#4a4a52', '#141416']); g.fillRect(sx - 12, R.top, 24, sb - 150 - R.top);
+      g.fillStyle = '#121214'; for (var jI = 0; jI < 4; jI++) g.fillRect(sx - 15, R.top + 60 + jI * 140, 30, 6);
       g.fillStyle = 'rgba(120,60,30,0.45)'; g.fillRect(sx - 30, sb - 90, 20, 30);
       g.fillStyle = '#0a0a0c'; g.fillRect(sx - 20, sb - 70, 40, 24);
     }
