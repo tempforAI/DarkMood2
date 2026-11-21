@@ -19,7 +19,7 @@
       ch4: '第四章 假面之雪', ch5: '终章 雪葬审判'
     },
     seats: ['ritsu', 'sayo', 'chiyuki', 'renji', 'miyabi', 'minato', 'genichiro', 'sumi', 'shimo', 'kiriya', 'kumagai', 'abe', 'arima', 'makabe', 'yomoda'],
-    outdoor: [],
+    outdoor: ['tunnel', 'bridge', 'village_road', 'bathhouse', 'watermill', 'snow_garden', 'shrine', 'kagura', 'okurimon', 'valley', 'village_view', 'watchtower', 'cemetery', 'jizo', 'title', 'map'],
     cast: ['ritsu', 'sayo', 'chiyuki', 'renji', 'miyabi', 'minato', 'genichiro', 'sumi', 'shimo', 'kiriya', 'kumagai', 'abe', 'arima', 'makabe', 'yomoda'],
     noBond: ['ritsu', 'genichiro', 'arima'],
     fates: {
@@ -32,6 +32,7 @@
       lines: ['一、雪封山期间，村中出现死者，全员到裁屋集合，举行「寄合」。',
         '二、在场者投票，多数决。',
         '三、被裁定者关进雪牢，翌日黎明送入雪中。',
+        '四、黎明之前，持有新证据者可请求一次「再寄合」。',
         '——律的约定：若能在寄合上证明真凶，真凶将被关押、交给警察；若不能，村子按古法行事。']
     },
     verses: {

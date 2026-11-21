@@ -201,7 +201,7 @@
   //   watchtower:past     —— 1983 年：半钟完好、发亮（2003 年钟上有一道裂缝）
   //   snow_garden:buried  —— 排气管口被一堆棱角分明、带铲痕的雪块埋住；庇上积雪缺了一块直角（第二章）
   //   charcoal_hut:past   —— 1983 年有人居住：炭窑有火、草席床铺、木板上的炭字、收音机（幕间用）
-  //   village_view:past   —— 1983 年的夜景：三十二盏灯、吊桥上一串灯亮着、分校窗里有光（幕间用）
+  //   village_view:past   —— 1983 年的夜景：三十二盏灯、吊桥上一串灯亮着、分校窗里有光（终章闪回 / 幕间可选）
   //   fuyuki_house:past   —— 1983 年雪绘母女住着时：整洁、围炉里有火、柱上刻痕崭新
   DM.BG_VARIANTS = {
     bridge: ['cut'], village_road: ['past'], watchtower: ['past'], snow_garden: ['buried'],
