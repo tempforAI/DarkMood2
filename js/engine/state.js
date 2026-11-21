@@ -41,6 +41,9 @@
   St.GFX_KEYS = ['res', 'model', 'tex', 'light', 'post', 'charLight', 'particles', 'fps'];
   St.recommend = function () {
     var d = St.device, mem = d.mem || (d.mobile ? 3 : 8), cores = d.cores || (d.mobile ? 4 : 8);
+    // iOS Safari 不提供 deviceMemory，且可能隐藏真实核心数：按屏幕像素粗略判断
+    var ios = /iPhone|iPad|iPod/.test(ua) || (navigator.maxTouchPoints > 1 && /Macintosh/.test(ua));
+    if (ios) { var px = (screen.width || 0) * (screen.height || 0) * d.dpr * d.dpr; return px >= 2.4e6 ? 'medium' : 'low'; }
     if (mem <= 1 || cores <= 2) return 'low';
     if (d.mobile) return (mem >= 6 && cores >= 8) ? 'high' : (mem >= 3 ? 'medium' : 'low');
     if (mem >= 8 && cores >= 8) return 'ultra';
