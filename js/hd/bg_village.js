@@ -2248,7 +2248,7 @@
     // 背后的杉林（层层，越远越淡）
     for (var L = 0; L < 3; L++) for (i = 0; i < K.byModel(q, 10, 16, 22); i++) { var tx = r.range(-40, 1960); if (L === 2 && tx > 640 && tx < 1280) continue; snowCedar(g, q, tx, 560 + L * 60 + r.range(0, 40), r.range(300, 520) * (0.6 + L * 0.25), r, { haze: 0.55 - L * 0.22 }); }
     // 地面与山坡
-    snowField(g, q, 0, 520, W, 560, { yh: 300, seed: 6103, amp: 1, fog: 200, flat: true });
+    snowField(g, q, 0, 520, W, 560, { yh: 300, seed: 6103, amp: 0.5, fog: 200, flat: true, freq: 1.8 });
     // 石阶（从画面下方一直向上通到鸟居）
     drawShrineStairs(g, q);
     snowTorii(g, q, 960, 150, 500, 400, { seed: 6105 });
@@ -2439,7 +2439,7 @@
     // 门外：雾中的谷（越远越白）
     for (var L = 0; L < 3; L++) for (i = 0; i < K.byModel(q, 8, 12, 16); i++) { var tx = r.range(-40, 1960); snowCedar(g, q, tx, 600 + L * 50 + r.range(-20, 20), r.range(180, 300) * (0.6 + L * 0.2), r, { haze: 0.85 - L * 0.22 }); }
     rectP(g, 0, 300, W, 500); fillP(g, K.lin(g, 0, 300, 0, 800, ['rgba(214,218,228,0)', 'rgba(214,218,228,0.75)', 'rgba(214,218,228,0.4)']));
-    snowField(g, q, 0, 640, W, 440, { yh: 560, seed: 7003, amp: 0.9, fog: 160 });
+    snowField(g, q, 0, 640, W, 440, { yh: 560, seed: 7003, amp: 0.6, fog: 160 });
     // 送道：穿过门、向谷中下去，消失在雾里
     trodPath(g, q, [960, 1100, 950, 900, 960, 780, 972, 700, 980, 640], 170, 30, 7005, { prints: true });
     g.fillStyle = K.lin(g, 0, 560, 0, 760, ['rgba(220,224,232,0.95)', 'rgba(220,224,232,0)']); g.fillRect(760, 560, 420, 200);
