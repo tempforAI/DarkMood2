@@ -4,6 +4,7 @@
   DM.GAME = {
     id: 'darkmood2',
     storage: 'darkmood2_',
+    saveFolder: 'DarkMood2_雪葬村审判',  // 存档文件夹里本作使用的子文件夹名
     title: 'DARK MOOD Ⅱ',
     subtitle: '雪葬村审判',
     version: 'v1.0',

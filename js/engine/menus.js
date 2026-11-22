@@ -60,6 +60,7 @@
   M.openSave = function () {
     if (!I.resume || !St.s) return;
     var P = panel('存档');
+    saveLocationBar(P);
     var list = el('div', 'save-list', P.bd);
     for (var i = 1; i <= St.SLOTS; i++) (function (i) {
       var d = St.read(i);
@@ -85,8 +86,15 @@
     UI.layers.title.classList.add('hidden');
     I.loadSnapshot(d).catch(function (e) { console.error(e); alert('读档失败：' + e.message); M.toTitle(); });
   }
+  function saveLocationBar(P) {
+    var bar = el('div', 'save-loc', P.bd);
+    el('span', '', bar, '存档位置：' + DM.Storage.describe());
+    var b = el('button', 'btn small', bar, '更改…');
+    b.addEventListener('click', function (e) { e.stopPropagation(); DM.Audio.se('select'); M.openSettings('save'); });
+  }
   M.openLoad = function () {
     var P = panel('读档');
+    saveLocationBar(P);
     var list = el('div', 'save-list', P.bd);
     ['auto', 'cp'].concat([1, 2, 3, 4, 5, 6, 7, 8, 9]).forEach(function (k) {
       var d = St.read(k);
@@ -105,7 +113,7 @@
   M.openSettings = function (tab) {
     var P = panel('设置', 'settings');
     var tabs = {};
-    [['gfx', '画面'], ['text', '文字与声音'], ['ctrl', '操作']].forEach(function (t) {
+    [['gfx', '画面'], ['text', '文字与声音'], ['save', '存档'], ['ctrl', '操作']].forEach(function (t) {
       var b = el('button', 'btn small', P.tools, t[1]);
       b.addEventListener('click', function () { DM.Audio.se('select'); show(t[0]); });
       tabs[t[0]] = b;
@@ -114,7 +122,7 @@
       setTab = kk;
       Object.keys(tabs).forEach(function (x) { tabs[x].classList.toggle('on', x === kk); });
       Core.clear(P.bd);
-      if (kk === 'gfx') gfxSettings(P.bd); else if (kk === 'text') textSettings(P.bd); else ctrlSettings(P.bd);
+      if (kk === 'gfx') gfxSettings(P.bd); else if (kk === 'text') textSettings(P.bd); else if (kk === 'save') saveSettings(P.bd, function () { show('save'); }); else ctrlSettings(P.bd);
     }
     show(tab || setTab);
   };
@@ -196,6 +204,56 @@
     slider(bd, '音乐音量', 'bgm');
     slider(bd, '音效音量', 'se');
   }
+  // 存档位置：云盘 / 外置硬盘文件夹（Chrome、Edge），或导出 / 导入存档文件（所有浏览器）
+  function saveSettings(bd, refresh) {
+    var SG = DM.Storage;
+    var info = el('div', 'gfx-info', bd, '当前存档位置：' + SG.describe());
+    if (SG.lastSync && SG.state === 'connected') info.textContent += '　上次同步 ' + St.fmtTime(SG.lastSync);
+    function act(btnRow, label, fn, cls) {
+      var b = el('button', 'btn small' + (cls ? ' ' + cls : ''), btnRow, label);
+      b.addEventListener('click', function (e) {
+        e.stopPropagation(); DM.Audio.se('select');
+        var r = fn(); if (r && r.then) r.then(function (msg) { if (msg) UI.toast('存档', msg, 'note'); refresh(); }, function (err) {
+          if (err && err.name === 'AbortError') return;      // 玩家取消了选择
+          UI.toast('存档', (err && err.message) || '操作失败', 'note'); refresh();
+        });
+      });
+      return b;
+    }
+    var r1 = row(bd, '存档文件夹', '例如 OneDrive / Dropbox 里的文件夹，或外置硬盘');
+    if (SG.fsSupported) {
+      act(r1, SG.state === 'local' ? '选择文件夹…' : '更换文件夹…', function () {
+        return SG.choose().then(function (n) { return '已连接「' + SG.rootName + '」' + (n ? '，取回了 ' + n + ' 项较新的存档' : ''); });
+      }, SG.state === 'local' ? 'gold' : '');
+      if (SG.state === 'needs-permission') act(r1, '重新授权「' + SG.rootName + '」', function () {
+        return SG.reconnect().then(function () { return '已重新连接'; });
+      }, 'gold');
+      if (SG.state === 'connected') act(r1, '立即同步', function () { return SG.sync().then(function (n) { return n ? '已取回 ' + n + ' 项较新的存档' : '已同步'; }); });
+      if (SG.state !== 'local') act(r1, '断开', function () { return SG.disconnect().then(function () { return '已改回浏览器本地存档（文件夹里的存档文件不会被删除）'; }); });
+    } else {
+      el('span', 'set-note', r1, '当前浏览器不支持直接读写文件夹（需要电脑版 Chrome 或 Edge）。请使用下面的导出 / 导入。');
+    }
+    var r2 = row(bd, '存档文件', '所有浏览器都可用，适合手机或临时搬运');
+    act(r2, '导出存档文件', function () { var n = SG.exportFile(); return Promise.resolve('已导出 ' + n); });
+    var inp = el('input', '', bd); inp.type = 'file'; inp.accept = '.dmsave,.json'; inp.style.display = 'none';
+    inp.addEventListener('change', function () {
+      var f = inp.files && inp.files[0]; if (!f) return;
+      SG.importFile(f).then(function (r) {
+        UI.toast('存档', '导入完成：采用 ' + r.taken + ' 个较新的存档' + (r.kept ? '，保留 ' + r.kept + ' 个本地较新的存档' : ''), 'note'); refresh();
+      }, function (err) { UI.toast('存档', (err && err.message) || '导入失败', 'note'); });
+      inp.value = '';
+    });
+    act(r2, '导入存档文件…', function () { inp.click(); });
+    var tip = el('p', 'set-tip', bd);
+    tip.textContent = SG.fsSupported ?
+      '怎样换电脑继续玩：\n① 在这台电脑上点「选择文件夹…」，选 OneDrive（或其他云盘、外置硬盘）里的一个文件夹，例如「OneDrive/游戏存档」。\n' +
+      '② 之后的存档、自动存档、结局记录都会自动写进其中的「' + (GM.saveFolder || GM.id) + '」子文件夹。\n' +
+      '③ 在另一台电脑上用 Chrome / Edge 打开游戏，同样选择这个文件夹，存档就会出现在「读档」里。\n' +
+      '两台电脑上的同一个存档位以较新的为准；切回游戏窗口时会自动重新同步。画质设置不会同步。' :
+      '怎样换设备继续玩：点「导出存档文件」，把下载的 .dmsave 文件放进云盘；在另一台设备上点「导入存档文件…」选中它即可。\n' +
+      '导入时每个存档位以较新的为准，不会覆盖更新的本地存档。';
+  }
+
   function ctrlSettings(bd) {
     opts(bd, '审判难度', 'difficulty', [['easy', '轻松（答错1次即提示）'], ['normal', '标准']]);
     opts(bd, '画面震动', 'shake', [[true, '开'], [false, '关']]);
@@ -380,6 +438,16 @@
     b2('关于', about);
     var E = DM.ENDINGS || {}, n = Object.keys(E).length, got = Object.keys(E).filter(St.hasEnding).length;
     el('div', 'foot', L, GM.version + '　' + GM.footer + (n ? '　·　结局 ' + got + '/' + n : ''));
+    var SG = DM.Storage;
+    if (SG && SG.state === 'needs-permission') {
+      var rc = el('button', 'btn small gold save-reconnect', L, '连接存档文件夹「' + SG.rootName + '」');
+      rc.addEventListener('click', function (e) {
+        e.stopPropagation(); DM.Audio.init(); DM.Audio.se('ok');
+        SG.reconnect().then(function () { M.toTitle(); UI.toast('存档', '已连接存档文件夹', 'note'); }, function (err) { UI.toast('存档', (err && err.message) || '没有获得授权', 'note'); });
+      });
+    } else if (SG && SG.state === 'connected') {
+      el('div', 'save-badge', L, '存档：「' + SG.rootName + '」');
+    }
     if (fsSupported() && St.device.touch) {
       var fsb = el('button', 'btn small fs-btn', L, '全屏');
       fsb.addEventListener('click', function (e) { e.stopPropagation(); toggleFs(); });

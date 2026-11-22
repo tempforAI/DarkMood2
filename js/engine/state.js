@@ -95,7 +95,19 @@
     if (raw) try { var o = JSON.parse(raw); if (o && o.reached) St.progress = o; } catch (e) { /* ignore */ }
     St.progress.endings = St.progress.endings || {};
   };
-  function saveProg() { safeSet(KEY_PROG, JSON.stringify(St.progress)); }
+  // St.persist(kind, key, raw)：外部存档位置（云盘/外置硬盘文件夹）的写入钩子，由 storage.js 设置
+  function saveProg() { var raw = JSON.stringify(St.progress); safeSet(KEY_PROG, raw); if (St.persist) St.persist('progress', null, raw); }
+  // 合并另一台设备的进度（到达的章节、通关、结局取并集）。返回本地是否有变化
+  St.mergeProgress = function (o) {
+    if (!o || !o.reached) return false;
+    var P = St.progress, changed = false;
+    o.reached.forEach(function (c) { if (P.reached.indexOf(c) < 0) { P.reached.push(c); changed = true; } });
+    if (o.cleared && !P.cleared) { P.cleared = true; changed = true; }
+    var E = o.endings || {};
+    Object.keys(E).forEach(function (k) { if (!P.endings[k] || E[k] < P.endings[k]) { if (!P.endings[k]) changed = true; P.endings[k] = E[k]; } });
+    if (changed) safeSet(KEY_PROG, JSON.stringify(P));
+    return changed;
+  };
   St.markReached = function (ch) {
     if (St.progress.reached.indexOf(ch) < 0) { St.progress.reached.push(ch); saveProg(); }
   };
@@ -141,7 +153,14 @@
     var s = JSON.parse(JSON.stringify(St.s));
     return { s: s, resume: resume, meta: meta || {}, time: Date.now() };
   };
-  St.write = function (slot, snap) { return safeSet(KEY_SAVE + slot, JSON.stringify(snap)); };
+  St.write = function (slot, snap) {
+    var raw = JSON.stringify(snap), ok = safeSet(KEY_SAVE + slot, raw);
+    if (St.persist) St.persist('slot', slot, raw);
+    return ok || !!St.persist;
+  };
+  // 只写本地缓存（从外部文件夹同步回来时用，不再回写）
+  St.writeLocal = function (slot, snap) { return safeSet(KEY_SAVE + slot, JSON.stringify(snap)); };
+  St.SLOT_KEYS = ['auto', 'cp', 1, 2, 3, 4, 5, 6, 7, 8, 9];
   St.read = function (slot) {
     var raw = safeGet(KEY_SAVE + slot);
     if (!raw) return null;

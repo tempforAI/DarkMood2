@@ -429,3 +429,9 @@ body.touch .save-slot { padding: 13px 14px; }
 body.touch .panel .hd .btn.small { min-width: 80px; }
 body.touch .btn:not(.on):not(.gold):hover { background: #141225; border-color: var(--line); color: var(--ink); }
 body.touch .btn.on, body.touch .btn.gold { border-color: var(--gold); }
+
+/* ---------- 存档位置 ---------- */
+.save-loc { display: flex; align-items: center; gap: 12px; font-size: 14px; color: var(--gold); margin-bottom: 10px; }
+.set-note { font-size: 13px; color: var(--ink-dim); line-height: 1.6; }
+#title .save-reconnect { position: absolute; right: 16px; top: 14px; }
+#title .save-badge { position: absolute; right: 16px; top: 14px; font-size: 13px; color: #8d8698; }

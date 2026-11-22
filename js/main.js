@@ -4,8 +4,9 @@
   var DM = window.DM, Core = DM.Core, St = DM.State;
 
   function boot() {
-    // 先按画风加载美术模块（高清 / 经典像素），再初始化
-    Core.loadArt(St.settings.style).then(start);
+    // 先按画风加载美术模块（高清 / 经典像素）并恢复存档文件夹，再初始化
+    var saves = DM.Storage ? DM.Storage.init() : Promise.resolve();
+    Promise.all([Core.loadArt(St.settings.style), saves]).then(start, start);
   }
 
   function start() {
@@ -46,6 +47,10 @@
       });
       return;
     }
+    // 另一台电脑写入了较新的存档：如果正在标题画面，刷新「继续游戏」
+    if (DM.Storage) DM.Storage.onPulled = function () {
+      if (!St.s && !DM.UI.layers.title.classList.contains('hidden')) DM.Menus.toTitle();
+    };
     DM.Menus.toTitle();
   }
 
